@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-export const config = { runtime: 'edge' };
-
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; 
 const botToken = process.env.BOT_TOKEN;
