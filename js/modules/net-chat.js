@@ -1,42 +1,59 @@
 // js /modules /net-chat.js
-// 1. Проверка подписки в Telegram-канале через бэкенд Edge API
+// 1. Проверка подписки и авторизация в Supabase через новый Edge API
 window.checkSubscriptionAndLoad = async function(uid) {
     try {
-        // 🛠️ ХЕНДШЕЙК ДЛЯ ЛОКАЛЬНОЙ ОРАБОТКИ MOCK-ПОЛЬЗОВАТЕЛЯ
+        // ХЕНДШЕЙК ДЛЯ РАЗРАБОТКИ (если откроешь ссылку вне Telegram в обычном браузере)
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         if (isLocalhost && uid === 999999) {
-            console.log("🛠️ [Dev Mode]: Авторизация Mock-пользователя. Назначены Admin-права.");
-            
+            console.log("🛠️ [Dev Mode]: Авторизация Mock-пользователя.");
             window.config = window.config || {};
             window.config.dailyLimit = 9999;
             window.config.role = 'admin';
-            window.config.serverModels = { gemini: true, deepseek: true, gpt: true, claude: true, grok: true };
-
+            window.config.serverModels = { gemini: true, deepseek: true, gpt: true };
             window.showChat();
             if (typeof window.renderModelSwitcher === 'function') window.renderModelSwitcher();
             if (typeof window.selectTopic === 'function') window.selectTopic(window.currentTopic);
-            return; // Прерываем выполнение, на сервер не стучимся
-        }
-
-        const response = await fetch(`/api/check-sub?userId=${uid}`);
-        const data = await response.json();
-        if (data.error) {
-            console.error("Сервер проверки подписки вернул ошибку:", data.error);
-            window.showGuest({ msg: "500", joke: "Сбой синхронизации с сервером" });
             return;
         }
-        window.config.dailyLimit = data.dailyLimit;
-        window.config.role = data.role;
+
+        // Извлекаем сырую строку инициализации Telegram
+        const tg = window.Telegram?.WebApp;
+        const initDataStr = tg?.initData || "";
+
+        // Отправляем POST-запрос на наш новый защищенный роут авторизации
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ initData: initDataStr })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            console.error("Сервер авторизации вернул ошибку:", data.error);
+            window.showGuest({ msg: response.status.toString(), joke: data.error || "Сбой авторизации" });
+            return;
+        }
+
+        // Заполняем глобальный конфиг данными, которые посчитал и вернул бэкенд
+        window.config = window.config || {};
+        window.config.dailyLimit = data.user.dailyLimit;
+        window.config.role = data.user.role;
         window.config.serverModels = data.serverModels;
-        if (data.isMember || data.role === 'admin') {
+
+        // Если пользователь имеет доступ (member или роли trial/premium/admin)
+        if (data.isMember || ['admin', 'premium', 'trial'].includes(data.user.role)) {
             window.showChat();
             if (typeof window.renderModelSwitcher === 'function') window.renderModelSwitcher();
             if (typeof window.selectTopic === 'function') window.selectTopic(window.currentTopic);
         } else {
             window.showGuest({ msg: "403", joke: "Для доступа к ИИ необходимо подписаться на канал!" });
         }
+
     } catch (err) {
-        console.error("Ошибка сети при проверке подписки:", err);
+        console.error("Ошибка сети при авторизации:", err);
         window.showGuest({ msg: "Сбой сети", joke: "Проверьте интернет-соединение" });
     }
 };
