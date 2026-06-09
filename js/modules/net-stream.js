@@ -14,7 +14,11 @@ window.streamAiResponse = async function(cleanHistoryMessages, userKey, userLang
     try {
         const response = await fetch('/api/chat/stream', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                // 🔐 👉 ДОБАВЛЯЕМ: Передаем зашифрованную строку авторизации Telegram
+                'X-TG-Init-Data': window.Telegram?.WebApp?.initData || ''
+            },
             body: JSON.stringify({
                 historyMessages: cleanHistoryMessages,
                 currentTopic: userKey, // На фронтенде передается ID темы
