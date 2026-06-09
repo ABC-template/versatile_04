@@ -4,7 +4,49 @@ import { streamText } from 'ai';
 
 export const config = { runtime: 'edge' };
 
-// Вспомогательная функция сбора всех доступных ключей ротации из переменных окружения vercel
+// 🛡️ Нативный Edge-валидатор параметров Telegram (Web Crypto API)
+async function verifyTelegramInitData(initDataStr, botToken) {
+    if (!initDataStr) return false;
+    try {
+        const params = new URLSearchParams(initDataStr);
+        const hash = params.get('hash');
+        if (!hash) return false;
+
+        // 1. Сортируем все ключи, исключая сам hash
+        const keys = Array.from(params.keys()).filter(k => k !== 'hash').sort();
+        const dataCheckString = keys.map(k => `${k}=${params.get(k)}`).join('\n');
+
+        const encoder = new TextEncoder();
+        
+        // 2. Создаем секретный ключ: HMAC-SHA256("WebAppData", botToken)
+        const webAppDataKey = await crypto.subtle.importKey(
+            'raw', encoder.encode('WebAppData'),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        );
+        const secretKeyBuffer = await crypto.subtle.sign('HMAC', webAppDataKey, encoder.encode(botToken));
+        
+        // 3. Импортируем полученный буфер как ключ HMAC
+        const secretKey = await crypto.subtle.importKey(
+            'raw', secretKeyBuffer,
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        );
+        
+        // 4. Считаем финальную подпись: HMAC-SHA256(secretKey, dataCheckString)
+        const signatureBuffer = await crypto.subtle.sign('HMAC', secretKey, encoder.encode(dataCheckString));
+        
+        // 5. Переводим байты подписи в Hex-строку
+        const signatureHex = Array.from(new Uint8Array(signatureBuffer))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+
+        return signatureHex === hash;
+    } catch (e) {
+        console.error("Ошибка верификации криптографии:", e);
+        return false;
+    }
+}
+
+// Вспомогательная функция сбора ключей ротации
 function getRotatedKeysPool() {
     const keys = [];
     let i = 0;
@@ -17,15 +59,10 @@ function getRotatedKeysPool() {
     return keys;
 }
 
-// Генератор умной языковой инструкции, исключающий "эффект австралийца"
+// Генератор умной языковой инструкции
 function getLanguageInstruction(userLang) {
-    const langMap = {
-        ru: 'русском языке',
-        en: 'английском языке',
-        it: 'итальянском языке'
-    };
+    const langMap = { ru: 'русском языке', en: 'английском языке', it: 'итальянском языке' };
     const targetLangStr = langMap[userLang] || 'русском языке';
-    
     return `[Системная локаль пользователя: ${userLang}]. Instruction: Всегда веди диалог, пиши пояснения и комментарии строго на ${targetLangStr}. Exception: Если пользователь отправляет текст на другом языке с явной просьбой о переводе, анализе, или напрямую просит переключить язык общения — полностью подчиняйся контексту его запроса и отвечай на выбранном им языке.`;
 }
 
@@ -35,9 +72,23 @@ export default async function handler(request) {
     }
 
     try {
-        const { historyMessages = [], currentTopic, userLang } = await request.json();
+        // 🔐 👉 ДОБАВЛЯЕМ ПРОВЕРКУ: Достаем заголовок авторизации
+        const initData = request.headers.get('x-tg-init-data');
+        const isBotTokenConfigured = !!process.env.BOT_TOKEN;
+        
+        // Если BOT_TOKEN прописан в Vercel, жестко проверяем подпись
+        if (isBotTokenConfigured) {
+            const isValid = await verifyTelegramInitData(initData, process.env.BOT_TOKEN);
+            if (!isValid) {
+                return new Response(JSON.stringify({ error: 'Доступ заблокирован: невалидная сессия Telegram.' }), {
+                    status: 401, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
 
-        // 1. ОПРЕДЕЛЯЕМ МОДЕЛЕЙ-ИСПОЛНИТЕЛЕЙ И СИСТЕМНЫЕ ПРОМПТЫ ДЛЯ КАЖДОЙ ТЕМЫ
+        const { historyMessages = [], currentTopic, userLang } = await request.json();
+        
+        // ... Дальше идет твой стандартный код выбора моделей (deepseek, gpt-4o, gemini...) ...
         let openRouterModelId = 'google/gemini-2.5-flash';
         let rolePrompt = 'Ты — Versatile AI, универсальный и полезный ассистент.';
         let temperature = 0.5;
