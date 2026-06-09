@@ -1,5 +1,55 @@
 async function initApp() {
     const root = document.documentElement;
+
+    // =========================================================================
+    // 🛠️ [DEV MODE] БЛОК АВТОПОДБРОСА ДЛЯ ЛОКАЛЬНОЙ РАЗРАБОТКИ (LOCALHOST)
+    // =========================================================================
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocalhost) {
+        if (!window.Telegram) window.Telegram = {};
+        if (!window.Telegram.WebApp) window.Telegram.WebApp = {};
+        
+        const tgMock = window.Telegram.WebApp;
+
+        // Имитируем сырую строку initData для будущих проверок валидности
+        if (!tgMock.initData) {
+            tgMock.initData = "query_id=MOCK_DEV_QA&user=%7B%22id%22%3A999999%2C%22first_name%22%3A%22%D0%94%D0%B5%D0%B2%22%2C%22last_name%22%3A%22%D0%A2%D0%B5%D1%81%D1%82%D0%B5%D1%80%22%2C%22username%22%3A%22dev_tester%22%2C%22language_code%22%3A%22ru%22%7D&auth_date=1710000000&hash=mock_hash_for_local_testing";
+        }
+
+        // Имитируем объект раскрытых данных пользователя
+        if (!tgMock.initDataUnsafe || !tgMock.initDataUnsafe.user) {
+            tgMock.initDataUnsafe = {
+                user: {
+                    id: 999999,
+                    first_name: "👨‍💻 Dev",
+                    last_name: "Tester",
+                    username: "dev_tester",
+                    language_code: "ru",
+                    photo_url: "https://gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
+                }
+            };
+        }
+
+        if (!tgMock.platform) tgMock.platform = 'ios';
+
+        // Эмулируем CloudStorage через localStorage, чтобы методы getItems/setItem не падали локально
+        if (!tgMock.CloudStorage) {
+            tgMock.CloudStorage = {
+                getItems: (keys, callback) => {
+                    const res = {};
+                    keys.forEach(k => { res[k] = localStorage.getItem(`tg_mock_cloud_${k}`); });
+                    if (callback) callback(null, res);
+                },
+                setItem: (key, value, callback) => {
+                    localStorage.setItem(`tg_mock_cloud_${key}`, value);
+                    if (callback) callback(null, true);
+                }
+            };
+        }
+        console.warn("⚠️ [Dev Mode]: Разработка на localhost. Подброшены mock-данные пользователя (ID: 999999)");
+    }
+    // =========================================================================
+
     const tg = window.Telegram?.WebApp;
     if (tg) {
         try { tg.ready(); tg.expand(); tg.setHeaderColor('transparent'); } catch (e) { console.error("Ошибка активации Telegram SDK:", e); }
@@ -35,7 +85,6 @@ async function initApp() {
     // СЛУШАТЕЛЬ СИСТЕМНОЙ КНОПКИ НАЗАД (БЕЗ КОНФЛИКТОВ С КЛАВИАТУРОЙ)
     if (tg) {
         try {
-            // Реагируем строго на клик по нативной стрелочке Назад в шапке Telegram
             tg.onEvent('backButtonClicked', () => { 
                 if (typeof setTelegramInsets === 'function') setTelegramInsets(); 
             });
@@ -46,7 +95,7 @@ async function initApp() {
 
     const user = tg?.initDataUnsafe?.user;
     if (user) {
-        const avatarUrl = user.photo_url || 'https://gravatar.com'; // Ссылка с пробелом
+        const avatarUrl = user.photo_url || 'https://gravatar.com';
         document.getElementById('user-avatar').src = avatarUrl;
         document.getElementById('card-avatar').src = avatarUrl;
         document.getElementById('user-name').innerText = user.first_name + (user.last_name ? ' ' + user.last_name : '');
@@ -68,10 +117,4 @@ async function initApp() {
     } else {
         if (typeof window.checkSubscriptionAndLoad === 'function') await window.checkSubscriptionAndLoad(uid);
     }
-}
-
-initApp();
-
-if (window.Telegram?.WebApp?.requestFullscreen) {
-    window.Telegram.WebApp.requestFullscreen().catch(err => console.log("Полноэкранный режим не поддерживается"));
 }
