@@ -1,8 +1,4 @@
 // api/auth.js
-export const config = {
-    runtime: 'edge',
-};
-
 /**
  * Валидация строки initData от Telegram с использованием Web Crypto API (Edge-совместимо)
  */
