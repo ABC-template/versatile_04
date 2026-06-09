@@ -109,6 +109,29 @@
     <script src="js/modules/net-voice.js"></script>
     <script src="js/modules/net-stream.js"></script>
     <script src="js/core/app.js"></script>
+<script>
+        console.log("=== [DEBUG] Проверка окружения браузера ===");
+        console.log("Telegram WebApp объект:", window.Telegram?.WebApp);
+        console.log("Telegram InitData:", window.Telegram?.WebApp?.initData ? "Есть (длина " + window.Telegram.WebApp.initData.length + ")" : "ОТСУТСТВУЕТ");
+        
+        // Через 3 секунды проверяем, ожил ли интерфейс
+        setTimeout(() => {
+            const header = document.getElementById('header');
+            console.log("=== [DEBUG] Проверка UI через 3 секунды ===");
+            console.log("Элемент #header найден:", !!header);
+            if (header) {
+                console.log("Классы у #header:", header.className);
+            }
+            
+            // Если экран всё ещё серый (класс hidden не снялся), принудительно подсветим проблему
+            if (header && header.classList.contains('hidden')) {
+                console.warn("[DEBUG] ВНИМАНИЕ: Скрипты инициализации не сняли класс .hidden! Приложение зависло.");
+                
+                // Временный хак: давай насильно отобразим интерфейс, чтобы проверить, отрисуется ли он
+                // header.classList.remove('hidden'); 
+            }
+        }, 3000);
+    </script>
 </body>
 </html>
 
