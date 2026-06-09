@@ -1,21 +1,33 @@
 // js /modules /net-chat.js
-
 // 1. Проверка подписки в Telegram-канале через бэкенд Edge API
 window.checkSubscriptionAndLoad = async function(uid) {
     try {
+        // 🛠️ ХЕНДШЕЙК ДЛЯ ЛОКАЛЬНОЙ ОРАБОТКИ MOCK-ПОЛЬЗОВАТЕЛЯ
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocalhost && uid === 999999) {
+            console.log("🛠️ [Dev Mode]: Авторизация Mock-пользователя. Назначены Admin-права.");
+            
+            window.config = window.config || {};
+            window.config.dailyLimit = 9999;
+            window.config.role = 'admin';
+            window.config.serverModels = { gemini: true, deepseek: true, gpt: true, claude: true, grok: true };
+
+            window.showChat();
+            if (typeof window.renderModelSwitcher === 'function') window.renderModelSwitcher();
+            if (typeof window.selectTopic === 'function') window.selectTopic(window.currentTopic);
+            return; // Прерываем выполнение, на сервер не стучимся
+        }
+
         const response = await fetch(`/api/check-sub?userId=${uid}`);
         const data = await response.json();
-
         if (data.error) {
             console.error("Сервер проверки подписки вернул ошибку:", data.error);
             window.showGuest({ msg: "500", joke: "Сбой синхронизации с сервером" });
             return;
         }
-
         window.config.dailyLimit = data.dailyLimit;
         window.config.role = data.role;
         window.config.serverModels = data.serverModels;
-
         if (data.isMember || data.role === 'admin') {
             window.showChat();
             if (typeof window.renderModelSwitcher === 'function') window.renderModelSwitcher();
