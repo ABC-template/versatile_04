@@ -139,6 +139,12 @@ function finalizeStreamMessage(msgDiv, finalText, activeChat) {
         });
         window.saveHistoriesToLocal();
     }
+    // 📈 👉 ДОБАВЛЯЕМ: Снимаем 1 заряд лимита с Trial-пользователя за успешный ответ
+    if (window.config?.role === 'trial') {
+        if (typeof window.incrementUsage === 'function') {
+            window.incrementUsage();
+        }
+    }
     
     const isNoLimit = window.config.dailyLimit >= 9000;
     if (!isNoLimit && typeof window.incrementUsage === 'function') {
