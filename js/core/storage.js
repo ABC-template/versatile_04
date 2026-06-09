@@ -1,15 +1,66 @@
 // js /core /storage.js
-
-window.loadLocalHistories = function() {
+// Загрузка локальных данных + инициация облачной синхронизации
+window.loadLocalHistories = async function() {
     try { window.chatHistories = JSON.parse(localStorage.getItem('tg_chat_histories') || '{}'); } catch(e) { window.chatHistories = {}; }
     try { window.activeChatIds = JSON.parse(localStorage.getItem('active_chat_ids') || '{}'); } catch(e) { window.activeChatIds = { code: null, creative: null, fast: null, kitchen: null, analytics: null }; }
+    
+    // Сразу запрашиваем актуальные чаты из Supabase
+    await window.syncChatsFromServer();
 };
 
+// Сохраняет данные в localStorage и отправляет слепок в Supabase
 window.saveHistoriesToLocal = function() {
     try {
         localStorage.setItem('tg_chat_histories', JSON.stringify(window.chatHistories));
         localStorage.setItem('active_chat_ids', JSON.stringify(window.activeChatIds));
-    } catch (e) { console.error("Превышен лимит localStorage:", e); }
+        
+        // Фоновая отправка на сервер (без await, чтобы интерфейс не фризило)
+        window.pushChatsToServer();
+    } catch (e) { 
+        console.error("Превышен лимит localStorage:", e); 
+    }
+};
+
+// Асинхронное скачивание чатов из облака
+window.syncChatsFromServer = async function() {
+    try {
+        const tg = window.Telegram?.WebApp;
+        const initDataStr = tg?.initData || "";
+        
+        const response = await fetch(`/api/chats?initData=${encodeURIComponent(initDataStr)}`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        if (data.histories && Object.keys(data.histories).length > 0) {
+            window.chatHistories = data.histories;
+            localStorage.setItem('tg_chat_histories', JSON.stringify(window.chatHistories));
+            // Перерисовываем UI под новые подгруженные данные
+            if (typeof window.refreshUiAfterChatSelection === 'function') {
+                window.refreshUiAfterChatSelection();
+            }
+        }
+    } catch (err) {
+        console.error("Ошибка синхронизации с облаком Supabase:", err);
+    }
+};
+
+// Отправка текущего состояния чатов в Supabase
+window.pushChatsToServer = async function() {
+    try {
+        const tg = window.Telegram?.WebApp;
+        const initDataStr = tg?.initData || "";
+        
+        await fetch('/api/chats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                initData: initDataStr,
+                histories: window.chatHistories
+            })
+        });
+    } catch (err) {
+        console.error("Ошибка отправки чатов на сервер:", err);
+    }
 };
 
 window.getCurrentActiveChat = function() {
