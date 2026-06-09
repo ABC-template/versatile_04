@@ -83,7 +83,13 @@ window.sendMessage = async function() {
         return;
     }
     
-    if (window.isSendingMessage) return; 
+    if (window.isSendingMessage) return;
+    
+    const role = window.config?.role || 'guest';
+    if (role === 'guest') {
+        window.showGuest({ msg: "403", joke: "Для доступа к ИИ необходимо подписаться на канал!" });
+        return;
+    }
 
     const input = document.getElementById('user-input');
     if (!input) return;
@@ -93,6 +99,16 @@ window.sendMessage = async function() {
     const isNoLimit = window.config.dailyLimit >= 9000;
     if (!isNoLimit && window.usedToday >= window.config.dailyLimit) {
         if (window.tg && window.tg.showAlert) window.tg.showAlert("Ежедневный лимит запросов исчерпан!");
+        return;
+    }
+    // 🧠 👉 ДОПОЛНИТЕЛЬНО (По желанию): Если хочешь запретить Trial-пользователям 
+    // заходить в "дорогие" темы (например, Creative, где крутится GPT-4o)
+    if (role === 'trial' && window.currentTopic === 'creative') {
+        if (window.tg && window.tg.showAlert) {
+            window.tg.showAlert("Креативный режим с GPT-4o доступен только для Premium!");
+        } else {
+            alert("Креативный режим с GPT-4o доступен только для Premium!");
+        }
         return;
     }
 
