@@ -6,15 +6,28 @@ window.openModalTab = function(tabName) {
     const keyArea = document.getElementById('dynamic-key-area');
     const subKey = document.getElementById('sub-footer-key');
     const subContext = document.getElementById('sub-footer-context');
-    
+    const scheduler = document.getElementById('scheduler-content'); // Наш новый блок
+
     if (!card) return;
     card.classList.remove('hidden');
+
+    // 1. Скрываем все обычные табы
     document.querySelectorAll('.modal-tab').forEach(t => t.classList.add('hidden'));
-    
-    const activeTab = document.getElementById(`tab-${tabName}`);
-    if (activeTab) activeTab.classList.remove('hidden');
-    
-    // Адаптивное управление подвалом внутри самой модалки
+    // 2. Скрываем планировщик
+    if (scheduler) scheduler.style.display = 'none';
+
+    // 3. Открываем нужный контент
+    if (tabName === 'scheduler') {
+        if (scheduler) {
+            scheduler.style.display = 'block';
+            if (typeof window.initSchedulerModule === 'function') window.initSchedulerModule();
+        }
+    } else {
+        const activeTab = document.getElementById(`tab-${tabName}`);
+        if (activeTab) activeTab.classList.remove('hidden');
+    }
+
+    // 4. Управление подвалом
     if (keyArea) {
         if (tabName === 'profile') {
             keyArea.style.display = 'block';
@@ -26,14 +39,16 @@ window.openModalTab = function(tabName) {
             if (subContext) subContext.classList.remove('hidden');
             if (typeof window.syncContextSliderWithActiveChat === 'function') window.syncContextSliderWithActiveChat();
         } else {
+            // Для favorites и scheduler скрываем подвал
             keyArea.style.display = 'none';
         }
     }
-    
+
+    // 5. Триггеры рендера
     if (tabName === 'favorites') window.renderGlobalFavorites();
     if (tabName === 'chats') window.renderHistoryChatsList();
-    
-    // Кнопка Назад Telegram перехватывает закрытие профиля
+
+    // 6. Кнопка Назад
     if (window.tg?.BackButton) {
         window.tg.BackButton.show();
         window.tg.BackButton.offClick();
