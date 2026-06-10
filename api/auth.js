@@ -2,6 +2,7 @@
 /**
  * Валидация строки initData от Telegram с использованием Web Crypto API (Edge-совместимо)
  */
+export const config = { runtime: 'edge' };
 async function verifyTelegramInitData(initData, botToken) {
     if (!initData || !botToken) return false;
     
