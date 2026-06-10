@@ -102,8 +102,17 @@ async function initApp() {
     }
 
     const uid = user?.id;
-    if (!uid) { document.getElementById('limit-info').innerText = "Ошибка: ID не найден"; return; }
-
+    if (!uid) { 
+        document.getElementById('limit-info').innerText = "Ошибка: ID не найден"; 
+        if (typeof window.showGuest === 'function') {
+            window.showGuest({ 
+                msg: "Среда не распознана", 
+                joke: "Пожалуйста, откройте мини-приложение внутри Telegram." 
+            });
+        }
+        return; 
+    }
+    
     if (typeof window.loadLocalHistories === 'function') window.loadLocalHistories();
 
     if (tg?.CloudStorage) {
@@ -118,3 +127,9 @@ async function initApp() {
         if (typeof window.checkSubscriptionAndLoad === 'function') await window.checkSubscriptionAndLoad(uid);
     }
 }
+// =========================================================================
+// 🚀 ЗАПУСК ПРИЛОЖЕНИЯ
+// =========================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+});
