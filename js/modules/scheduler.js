@@ -71,7 +71,10 @@ window.loadTasks = async () => {
         body: JSON.stringify({ action: 'get', userId: user.id })
     });
     
-    const tasks = await response.json();
+    // Получаем JSON и достаем массив data
+    const result = await response.json();
+    const tasks = result.data || []; // Если data нет, берем пустой массив
+    
     const list = document.getElementById('tasks-list');
     
     if (tasks.length === 0) {
@@ -79,6 +82,7 @@ window.loadTasks = async () => {
         return;
     }
 
+    // Теперь tasks — это массив, метод .map() сработает
     list.innerHTML = tasks.map(t => `
         <div style="padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
             <div>
