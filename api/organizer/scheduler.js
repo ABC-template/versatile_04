@@ -1,12 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Отключаем Realtime, чтобы не было конфликтов с WebSocket
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY,
-    {
-        realtime: {
-            enabled: false,
-        },
-    }
+const supabase = createClient(
+    process.env.SUPABASE_URL, 
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { realtime: { enabled: false } } // Оставляем это
 );
 
 export default async function handler(req, res) {
