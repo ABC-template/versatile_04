@@ -23,16 +23,42 @@ window.saveTask = async () => {
     const date = document.getElementById('task-date').value;
     const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
     
-    if (!text || !date) return alert("Заполните поля!");
+    if (!text || !date) {
+        alert("Заполните оба поля!");
+        return;
+    }
 
-    await fetch('/api/organizer/scheduler', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add', userId: user.id, taskText: text, triggerAt: date })
-    });
-    
-    document.getElementById('task-text').value = '';
-    window.loadTasks();
+    if (!user || !user.id) {
+        alert("Ошибка: Пользователь не определен");
+        return;
+    }
+
+    try {
+        console.log("Отправка задачи:", { text, date, userId: user.id });
+
+        const response = await fetch('/api/organizer/scheduler', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add', userId: user.id, taskText: text, triggerAt: date })
+        });
+
+        // Проверяем, ответил ли сервер успехом
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Сервер ответил ошибкой ${response.status}: ${errText}`);
+        }
+
+        const result = await response.json();
+        console.log("Успешно сохранено:", result);
+        
+        // Очищаем и обновляем список ТОЛЬКО если запрос прошел успешно
+        document.getElementById('task-text').value = '';
+        window.loadTasks();
+        
+    } catch (e) {
+        console.error("Критическая ошибка сохранения:", e);
+        alert("Не удалось сохранить задачу: " + e.message);
+    }
 };
 
 window.loadTasks = async () => {
