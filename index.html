@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Versatile TMA</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="add.css">
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -16,6 +15,7 @@
         <span id="limit-info">Синхронизация...</span>
         <span id="chat-model-indicator">Versatile AI</span>
         <div id="header-navigation" style="display: flex; align-items: center; gap: 8px;">
+            <div class="tab-btn" onclick="showTab('scheduler')">📅</div>
             <button class="action-btn" style="background: rgba(0,0,0,0.04); font-size: 13px;" onclick="window.openModalTab('chats')" title="Диалоги">💬</button>
             <button class="action-btn" style="background: rgba(0,0,0,0.04); font-size: 13px;" onclick="window.openModalTab('favorites')" title="Избранное">⭐</button>
             <div id="user-profile-trigger" onclick="window.openModalTab('profile')" style="cursor:pointer; margin-left: 4px;">
@@ -53,6 +53,7 @@
                     </div>
                     <div id="global-favorites-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
                 </div>
+                <div id="scheduler-content" class="tab-pane" style="display:none;">...</div>
             </div>
             <div id="dynamic-key-area">
                 <div id="sub-footer-key" class="hidden">
